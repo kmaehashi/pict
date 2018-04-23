@@ -6,7 +6,11 @@ SHORT_COMMIT=$(shell git log --pretty=format:'%h' -n 1)
 # suppress all warnings :-(
 CXXFLAGS=-fPIC -std=c++11 -Iapi -w -fpermissive
 TARGET=pict
-TARGET_LIB_SO=libpict.so
+ifeq ($(shell uname -s),Darwin)
+TARGET_LIB=pict.dylib
+else
+TARGET_LIB=libpict.so
+endif
 TEST_OUTPUT = test/rel.log test/rel.log.failures test/dbg.log
 TEST_OUTPUT += test/.stdout test/.stderr
 OBJS = $(OBJS_API) $(OBJS_CLI)
@@ -21,16 +25,18 @@ OBJS_CLI += cli/pict.o cli/strings.o
 pict: $(OBJS)
 	$(CXX) $(OBJS) -o $(TARGET)
 
-$(TARGET_LIB_SO): $(OBJS_API)
-	$(CXX) -fPIC -shared $(OBJS_API) -o $(TARGET_LIB_SO)
+$(TARGET_LIB): $(OBJS_API)
+	$(CXX) -fPIC -shared $(OBJS_API) -o $(TARGET_LIB)
+
+shlib: $(TARGET_LIB)
 
 test: $(TARGET)
 	cd test; perl test.pl ../$(TARGET) rel.log
 
 clean:
-	rm -f $(TARGET) $(TARGET_LIB_SO) $(TEST_OUTPUT) $(OBJS)
+	rm -f $(TARGET) $(TARGET_LIB) $(TEST_OUTPUT) $(OBJS)
 
-all: pict $(TARGET_LIB_SO)
+all: pict $(TARGET_LIB)
 
 source: clean
 	git archive --prefix="pict-$(COMMIT)/" -o "pict-$(SHORT_COMMIT).tar.gz" $(COMMIT)
